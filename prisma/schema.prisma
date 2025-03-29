@@ -1,21 +1,28 @@
-datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
-}
-
 generator client {
   provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("DIRECT_URL")
 }
 
 model Order {
   id            Int       @id @default(autoincrement())
   title         String
   clientName    String
-  clientContact String
+  contact       String
   amount        Float
   orderDate     DateTime
-  createdAt     DateTime  @default(now())
+  isDeposit     Boolean   @default(false)
+  deposit       Float?
+  isPaid        Boolean   @default(false)
+  isCompleted   Boolean   @default(false)
   expenses      Expense[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([orderDate])
 }
 
 model Expense {
@@ -24,6 +31,8 @@ model Expense {
   amount      Float
   description String?
   createdAt   DateTime @default(now())
-  order       Order    @relation(fields: [orderId], references: [id])
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderId     Int
+
+  @@index([orderId])
 } 
