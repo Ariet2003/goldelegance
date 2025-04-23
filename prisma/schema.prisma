@@ -30,9 +30,9 @@ model Expense {
   type        String   // taxi, banner, inscription, food, salary, other
   amount      Float
   description String?
-  createdAt   DateTime @default(now())
   order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderId     Int
+  createdAt   DateTime @default(now())
 
   @@index([orderId])
 } 

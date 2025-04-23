@@ -1,29 +1,12 @@
 import React, { useState } from 'react';
-import { FaTaxi, FaImage, FaFont, FaUtensils, FaUsers, FaPlus, FaEdit, FaTrash, FaTimes, FaUser, FaPhone, FaCalendar, FaMoneyBillWave, FaReceipt, FaChartPie } from 'react-icons/fa';
+import { FaTaxi, FaImage, FaFont, FaUtensils, FaUsers, FaPlus, FaEdit, FaTrash, FaTimes, FaUser, FaPhone, FaCalendar, FaMoneyBillWave, FaReceipt, FaChartPie, FaGasPump } from 'react-icons/fa';
 import type { Order, Expense } from '../types/order';
 
 interface OrderDetailsProps {
-  order: {
-    id: number;
-    title: string;
-    clientName: string;
-    contact: string;
-    amount: number;
-    orderDate: string;
-    isDeposit: boolean;
-    deposit: number | null;
-    isPaid: boolean;
-    isCompleted?: boolean;
-    expenses: {
-      id: number;
-      type: string;
-      amount: number;
-      description: string;
-    }[];
-  };
+  order: Order;
   onClose: () => void;
-  onAddExpense: (orderId: number, expense: { type: string; amount: number; description: string }) => void;
-  onUpdateExpense: (orderId: number, expenseId: number, expense: { type: string; amount: number; description: string }) => void;
+  onAddExpense: (orderId: number, expense: { type: string; amount: number; description: string | null }) => void;
+  onUpdateExpense: (orderId: number, expenseId: number, expense: { type: string; amount: number; description: string | null }) => void;
   onDeleteExpense: (orderId: number, expenseId: number) => void;
   onUpdatePaymentStatus: (orderId: number, isPaid: boolean) => void;
   onCompleteOrder: (orderId: number) => void;
@@ -44,6 +27,7 @@ const expenseTypes = [
   { id: 'inscription', name: 'Надпись', icon: FaFont },
   { id: 'food', name: 'Питание', icon: FaUtensils },
   { id: 'salary', name: 'Оплата сотрудникам', icon: FaUsers },
+  { id: 'gas', name: 'Бензин', icon: FaGasPump },
   { id: 'other', name: 'Другое', icon: FaPlus },
 ];
 
@@ -68,7 +52,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onClose, onAddExpens
     const expenseData = {
       type: selectedExpenseType,
       amount: parseFloat(expenseAmount),
-      description: expenseDescription || '',
+      description: expenseDescription || null,
     };
 
     if (editingExpense) {
@@ -88,8 +72,8 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onClose, onAddExpens
     setExpenseDescription('');
   };
 
-  const handleEditExpense = (expense: { id: number; type: string; amount: number; description: string }) => {
-    setEditingExpense({ ...expense, createdAt: '', orderId: order.id });
+  const handleEditExpense = (expense: { id: number; type: string; amount: number; description: string | null }) => {
+    setEditingExpense({ ...expense, createdAt: new Date().toISOString(), orderId: order.id });
     setSelectedExpenseType(expense.type);
     setExpenseAmount(expense.amount.toString());
     setExpenseDescription(expense.description || '');
@@ -155,7 +139,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onClose, onAddExpens
                       <FaMoneyBillWave size={12} className="text-gray-500" />
                       <span className="text-gray-400">Сумма:</span>
                     </div>
-                    <span className="text-white font-medium">{order.amount.toLocaleString()} ₽</span>
+                    <span className="text-white font-medium">{order.amount.toLocaleString()} с</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -164,41 +148,43 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onClose, onAddExpens
                     </div>
                     <span className="text-white">{new Date(order.orderDate).toLocaleDateString()}</span>
                   </div>
+
                   {order.isDeposit && (
                     <>
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-gray-400">Задаток:</span>
-                        <span className="text-white">{order.deposit?.toLocaleString()} ₽</span>
+                        <span className="text-white">{order.deposit?.toLocaleString()} с</span>
                       </div>
                       {!order.isPaid && (
                         <div className="flex items-center justify-between">
                           <span className="text-gray-400">Остаток:</span>
-                          <span className="text-red-400">{(order.amount - (order.deposit || 0)).toLocaleString()} ₽</span>
+                          <span className="text-red-400">{(order.amount - (order.deposit || 0)).toLocaleString()} с</span>
                         </div>
                       )}
-                      <div className="flex gap-2 mt-3">
-                        <button
-                          onClick={() => onUpdatePaymentStatus(order.id, !order.isPaid)}
-                          disabled={order.isCompleted}
-                          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
-                            order.isPaid
-                              ? 'bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20'
-                              : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 hover:bg-yellow-500/20'
-                          } ${order.isCompleted ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          {order.isPaid ? '✓ Оплачено полностью' : '⚡ Отметить как оплачено'}
-                        </button>
-                        {order.isPaid && !order.isCompleted && (
-                          <button
-                            onClick={() => onCompleteOrder(order.id)}
-                            className="py-2 px-4 rounded-lg text-sm font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-all duration-200"
-                          >
-                            Завершить заказ
-                          </button>
-                        )}
-                      </div>
                     </>
                   )}
+
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={() => onUpdatePaymentStatus(order.id, !order.isPaid)}
+                      disabled={order.isCompleted}
+                      className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        order.isPaid
+                          ? 'bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20'
+                          : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 hover:bg-yellow-500/20'
+                      } ${order.isCompleted ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {order.isPaid ? '✓ Оплачено полностью' : '⚡ Отметить как оплачено'}
+                    </button>
+                    {order.isPaid && !order.isCompleted && (
+                      <button
+                        onClick={() => onCompleteOrder(order.id)}
+                        className="py-2 px-4 rounded-lg text-sm font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-all duration-200"
+                      >
+                        Завершить заказ
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -213,15 +199,15 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onClose, onAddExpens
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <div className="bg-gray-800/50 rounded-lg p-2 border border-gray-700/50">
                     <p className="text-xs text-gray-400">Общая сумма</p>
-                    <p className="text-base font-semibold text-white">{order.amount.toLocaleString()} ₽</p>
+                    <p className="text-base font-semibold text-white">{order.amount.toLocaleString()} с</p>
                   </div>
                   <div className="bg-gray-800/50 rounded-lg p-2 border border-gray-700/50">
                     <p className="text-xs text-gray-400">Расходы</p>
-                    <p className="text-base font-semibold text-red-400">{stats.totalExpenses.toLocaleString()} ₽</p>
+                    <p className="text-base font-semibold text-red-400">{stats.totalExpenses.toLocaleString()} с</p>
                   </div>
                   <div className="bg-gray-800/50 rounded-lg p-2 border border-gray-700/50">
                     <p className="text-xs text-gray-400">Доход</p>
-                    <p className="text-base font-semibold text-green-400">{stats.profit.toLocaleString()} ₽</p>
+                    <p className="text-base font-semibold text-green-400">{stats.profit.toLocaleString()} с</p>
                   </div>
                 </div>
 
@@ -229,23 +215,23 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onClose, onAddExpens
                   <div className="bg-purple-900/20 rounded-lg p-2 border border-purple-500/20">
                     <div className="flex items-center justify-between">
                       <span className="text-purple-400 text-xs">Айдар</span>
-                      <span className="text-purple-400 text-xs font-medium">50%</span>
+                      <span className="text-purple-400 text-xs font-medium">45%</span>
                     </div>
-                    <p className="text-base font-bold text-white">{stats.profitShares.fifty.toLocaleString()} ₽</p>
+                    <p className="text-base font-bold text-white">{stats.profitShares.fifty.toLocaleString()} с</p>
                   </div>
                   <div className="bg-pink-900/20 rounded-lg p-2 border border-pink-500/20">
                     <div className="flex items-center justify-between">
                       <span className="text-pink-400 text-xs">Аман</span>
-                      <span className="text-pink-400 text-xs font-medium">40%</span>
+                      <span className="text-pink-400 text-xs font-medium">45%</span>
                     </div>
-                    <p className="text-base font-bold text-white">{stats.profitShares.forty.toLocaleString()} ₽</p>
+                    <p className="text-base font-bold text-white">{stats.profitShares.forty.toLocaleString()} с</p>
                   </div>
                   <div className="bg-purple-900/20 rounded-lg p-2 border border-purple-500/20">
                     <div className="flex items-center justify-between">
                       <span className="text-purple-400 text-xs">Аэлиза</span>
                       <span className="text-purple-400 text-xs font-medium">10%</span>
                     </div>
-                    <p className="text-base font-bold text-white">{stats.profitShares.ten.toLocaleString()} ₽</p>
+                    <p className="text-base font-bold text-white">{stats.profitShares.ten.toLocaleString()} с</p>
                   </div>
                 </div>
               </div>
@@ -370,7 +356,7 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onClose, onAddExpens
                         <p className="text-gray-300 text-sm font-medium">
                           {expenseType?.name || expense.type}
                         </p>
-                        <p className="text-red-400 font-medium">{expense.amount.toLocaleString()} ₽</p>
+                        <p className="text-red-400 font-medium">{expense.amount.toLocaleString()} с</p>
                       </div>
                     </div>
                   );

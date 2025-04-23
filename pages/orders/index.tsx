@@ -28,6 +28,7 @@ const OrdersPage: React.FC<{ initialOrders: Order[] }> = ({ initialOrders }) => 
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [showOrderForm, setShowOrderForm] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [orderFilter, setOrderFilter] = useState<'active' | 'completed'>('active');
 
   useEffect(() => {
     fetchOrders();
@@ -67,35 +68,41 @@ const OrdersPage: React.FC<{ initialOrders: Order[] }> = ({ initialOrders }) => 
     }
   };
 
-  const handleAddExpense = async (orderId: number, expense: { type: string; amount: number; description: string }) => {
+  const handleAddExpense = async (orderId: number, expense: { type: string; amount: number; description: string | null }) => {
     try {
       const response = await fetch(`/api/orders/${orderId}/expenses`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(expense),
       });
-      if (response.ok) {
-        const updatedOrder = await response.json();
-        setOrders(orders.map(order => order.id === orderId ? updatedOrder : order));
-        setSelectedOrder(updatedOrder);
-      }
+
+      if (!response.ok) throw new Error('Failed to add expense');
+
+      const updatedOrder = await response.json();
+      setOrders(orders.map(order => order.id === orderId ? updatedOrder : order));
+      setSelectedOrder(updatedOrder);
     } catch (error) {
       console.error('Error adding expense:', error);
     }
   };
 
-  const handleUpdateExpense = async (orderId: number, expenseId: number, expense: { type: string; amount: number; description: string }) => {
+  const handleUpdateExpense = async (orderId: number, expenseId: number, expense: { type: string; amount: number; description: string | null }) => {
     try {
       const response = await fetch(`/api/orders/${orderId}/expenses/${expenseId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(expense),
       });
-      if (response.ok) {
-        const updatedOrder = await response.json();
-        setOrders(orders.map(order => order.id === orderId ? updatedOrder : order));
-        setSelectedOrder(updatedOrder);
-      }
+
+      if (!response.ok) throw new Error('Failed to update expense');
+
+      const updatedOrder = await response.json();
+      setOrders(orders.map(order => order.id === orderId ? updatedOrder : order));
+      setSelectedOrder(updatedOrder);
     } catch (error) {
       console.error('Error updating expense:', error);
     }
@@ -164,15 +171,20 @@ const OrdersPage: React.FC<{ initialOrders: Order[] }> = ({ initialOrders }) => 
       totalExpenses,
       profit,
       profitShares: {
-        fifty: profit * 0.5,
-        forty: profit * 0.4,
+        fifty: profit * 0.45,
+        forty: profit * 0.45,
         ten: profit * 0.1,
       },
     };
   };
 
+  const filteredOrders = orders.filter(order => {
+    if (orderFilter === 'active') return !order.isCompleted;
+    return order.isCompleted;
+  });
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative pb-24">
       <Header />
       
       <main className="container mx-auto px-4 py-8 max-w-7xl">
@@ -180,16 +192,32 @@ const OrdersPage: React.FC<{ initialOrders: Order[] }> = ({ initialOrders }) => 
           <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-500 to-red-400 bg-clip-text text-transparent">
             Заказы
           </h1>
-          <button
-            onClick={() => setShowOrderForm(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg hover:shadow-pink-500/25 transform hover:scale-[1.02] font-medium"
-          >
-            <FaPlus className="text-sm" /> Новый заказ
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setOrderFilter('active')}
+              className={`px-6 py-2 text-sm font-medium rounded-xl transition-all duration-200 border ${
+                orderFilter === 'active'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 border-transparent text-white shadow-lg shadow-purple-500/25'
+                  : 'border-gray-700/50 text-gray-400 hover:border-purple-500/50'
+              }`}
+            >
+              Активные
+            </button>
+            <button
+              onClick={() => setOrderFilter('completed')}
+              className={`px-6 py-2 text-sm font-medium rounded-xl transition-all duration-200 border ${
+                orderFilter === 'completed'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 border-transparent text-white shadow-lg shadow-purple-500/25'
+                  : 'border-gray-700/50 text-gray-400 hover:border-purple-500/50'
+              }`}
+            >
+              Завершенные
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {orders.map((order) => (
+          {filteredOrders.map((order) => (
             <div
               key={order.id}
               onClick={() => setSelectedOrder(order)}
@@ -205,7 +233,7 @@ const OrdersPage: React.FC<{ initialOrders: Order[] }> = ({ initialOrders }) => 
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
-                      {order.amount.toLocaleString()} ₽
+                      {order.amount.toLocaleString()} с
                     </p>
                     <p className="text-sm text-gray-500 mt-1">
                       {new Date(order.orderDate).toLocaleDateString()}
@@ -216,28 +244,37 @@ const OrdersPage: React.FC<{ initialOrders: Order[] }> = ({ initialOrders }) => 
             </div>
           ))}
         </div>
-
-        {showOrderForm && (
-          <OrderForm onSubmit={handleCreateOrder} onClose={() => setShowOrderForm(false)} />
-        )}
-
-        {selectedOrder && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-gradient-to-b from-gray-900 to-gray-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-gray-700/50 shadow-2xl shadow-purple-500/10">
-              <OrderDetails
-                order={selectedOrder}
-                onClose={() => setSelectedOrder(null)}
-                onAddExpense={handleAddExpense}
-                onUpdateExpense={handleUpdateExpense}
-                onDeleteExpense={handleDeleteExpense}
-                onUpdatePaymentStatus={handleUpdatePaymentStatus}
-                onCompleteOrder={handleCompleteOrder}
-                calculateOrderStats={calculateOrderStats}
-              />
-            </div>
-          </div>
-        )}
       </main>
+
+      <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-40">
+        <button
+          onClick={() => setShowOrderForm(true)}
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg hover:shadow-pink-500/25 transform hover:scale-[1.02] font-medium"
+        >
+          <FaPlus className="text-sm" /> Новый заказ
+        </button>
+      </div>
+
+      {showOrderForm && (
+        <OrderForm onSubmit={handleCreateOrder} onClose={() => setShowOrderForm(false)} />
+      )}
+
+      {selectedOrder && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-gradient-to-b from-gray-900 to-gray-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-gray-700/50 shadow-2xl shadow-purple-500/10">
+            <OrderDetails
+              order={selectedOrder}
+              onClose={() => setSelectedOrder(null)}
+              onAddExpense={handleAddExpense}
+              onUpdateExpense={handleUpdateExpense}
+              onDeleteExpense={handleDeleteExpense}
+              onUpdatePaymentStatus={handleUpdatePaymentStatus}
+              onCompleteOrder={handleCompleteOrder}
+              calculateOrderStats={calculateOrderStats}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
