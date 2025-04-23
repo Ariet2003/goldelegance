@@ -5,6 +5,19 @@ import { useRouter } from 'next/router';
 const Header: React.FC = () => {
   const router = useRouter();
 
+  const handleLogout = async () => {
+    try {
+      const res = await fetch('/api/auth/logout', {
+        method: 'POST',
+      });
+      if (res.ok) {
+        router.push('/login');
+      }
+    } catch (error) {
+      console.error('Ошибка при выходе:', error);
+    }
+  };
+
   return (
     <header className="bg-gray-800 border-b border-gray-700">
       <nav className="container mx-auto px-4 py-4 max-w-7xl">
@@ -15,7 +28,7 @@ const Header: React.FC = () => {
           >
             GoldElegance
           </Link>
-          <div className="flex gap-4 sm:gap-6">
+          <div className="flex gap-4 sm:gap-6 items-center">
             <Link 
               href="/orders" 
               className="text-gray-300 hover:text-white transition-colors text-sm sm:text-base"
@@ -28,6 +41,12 @@ const Header: React.FC = () => {
             >
               Отчетность
             </Link>
+            <button
+              onClick={handleLogout}
+              className="text-gray-300 hover:text-white transition-colors text-sm sm:text-base bg-transparent border border-gray-600 px-3 py-1 rounded hover:bg-gray-700"
+            >
+              Выход
+            </button>
           </div>
         </div>
       </nav>
