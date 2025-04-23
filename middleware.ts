@@ -2,15 +2,22 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
+// Проверяем наличие JWT_SECRET
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is not defined in environment variables');
+}
+
+// Создаем секретный ключ для jose
+const secret = new TextEncoder().encode(JWT_SECRET);
+
 // Функция для проверки JWT токена
 async function verifyAuth(token: string) {
   try {
-    const verified = await jwtVerify(
-      token,
-      new TextEncoder().encode(process.env.JWT_SECRET)
-    );
+    const verified = await jwtVerify(token, secret);
     return verified.payload;
   } catch (err) {
+    console.error('JWT verification error:', err);
     return null;
   }
 }
